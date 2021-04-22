@@ -20,7 +20,7 @@ contract Rescuable is Initializable, OwnableUpgradeable {
         __Rescuable_init_unchained();
     }
 
-    function __Rescuable_init_unchained() internal initializer {               
+    function __Rescuable_init_unchained() internal initializer {
     }
 
     /**

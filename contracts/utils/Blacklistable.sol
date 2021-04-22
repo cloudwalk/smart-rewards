@@ -24,7 +24,7 @@ contract Blacklistable is OwnableUpgradeable {
         __Blacklistable_init_unchained();
     }
 
-    function __Blacklistable_init_unchained() internal initializer {               
+    function __Blacklistable_init_unchained() internal initializer {
     }
 
     /**
@@ -84,7 +84,7 @@ contract Blacklistable is OwnableUpgradeable {
         blacklister = _newBlacklister;
         emit BlacklisterChanged(blacklister);
     }
-    
+
     /**
      * @dev Adds msg.sender to blacklist (self-blacklist)
      */
@@ -92,5 +92,5 @@ contract Blacklistable is OwnableUpgradeable {
         blacklisted[msg.sender] = true;
         emit Blacklisted(msg.sender);
         emit SelfBlacklisted(msg.sender);
-    }      
+    }
 }
