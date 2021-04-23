@@ -1,11 +1,10 @@
 import { ethers, upgrades, waffle } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ContractFactory, Contract, BigNumber } from "ethers";
+import { ContractFactory, Contract, BigNumber, utils } from "ethers";
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
 import { deployContract, MockProvider, solidity } from "ethereum-waffle"
 import { smoddit, smockit } from "@eth-optimism/smock";
-import { IERC20Upgradeable__factory, IERC20Upgradeable, IERC20 } from "../typechain";
 
 describe("smart-rewards tests", async function() {
   let SpinMachineV1: ContractFactory;
@@ -17,12 +16,16 @@ describe("smart-rewards tests", async function() {
   let BRLC: Contract;
   let MockedBRLC: Contract;
   let rinkeby_BRLC_address = "0x6275c7A100A6d16035DEa9930E18890bE42185A7";
+  let abi = [
+    "function balanceOf(address account) public view returns (uint256)",
+    "function safeTransferFrom(IERC20Upgradeable token, address from, address to, uint256 value)"
+  ]
   
   beforeEach(async function() {
     BRLCFactory = await ethers.getContractFactory("SafeERC20Upgradeable");
     BRLC = await BRLCFactory.deploy();
     await BRLC.deployed();
-    MockedBRLC = await smockit(BRLC);
+    MockedBRLC = await smockit(BRLCFactory);
     [owner, addr1, addr2] = await ethers.getSigners();
     
     SpinMachineV1 = await ethers.getContractFactory("SpinMachineV1");
@@ -64,11 +67,9 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should buy extra spin", async function() {
-      console.log(spinMachine.address);
-      console.log(BRLC.address);
-      console.log(MockedBRLC.address);
-      console.log(owner.address);
-      console.log(await spinMachine.buyExtraSpin(owner.address, 1));
+      let result = await spinMachine.buyExtraSpin(owner.address, 1);
+      expect(result['to']).to.equal(spinMachine.address);
+      expect(result['from']).to.equal(owner.address);
     });
 
     it("Should fail if owner or addr1 can't spin", async function() {
@@ -79,16 +80,14 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should sucessfully spin", async function() {
-      let ModifiableBRLCFactory: ContractFactory = await smoddit("SafeERC20Upgradeable")
-      let ModifiableBRLC: Contract = await ModifiableBRLCFactory.deploy()
       let success: boolean;
       let winnings: number;
 
-      //console.log(await MockedBRLC.smocked.balanceOf().will.return.with(20));
-      //console.log(await MockedSpinMachine.smocked.spin)
-      await spinMachine.buyExtraSpin(owner.address, 1);
-      [ success, winnings ] = await spinMachine.spin();
-      //expect(MockedSpinMachine.smocked.spin).to.equal({success: true, winnings: 10})
+      let mockERC20: Contract;
+      mockERC20 = await deployMockContract(addr2, abi);
+      spinMachine = await upgrades.deployProxy(SpinMachineV1, [mockERC20.address]);
+      await mockERC20.mock.balanceOf.returns(utils.parseEther('9999'));
+      await spinMachine.spin();
     });
   });
 });
