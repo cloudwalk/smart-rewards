@@ -17,7 +17,7 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeMathUpgradeable for uint256;
 
-    address constant public token = 0x6275c7A100A6d16035DEa9930E18890bE42185A7;
+    address public token;
     mapping(address => uint256) public lastFreeSpin;
     mapping(address => uint256) public extraSpins;
     uint256 public extraSpinPrice;
@@ -31,21 +31,23 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
     event ExtraSpinGranted(address indexed sender, address indexed spinOwner, uint256 count);
     event Spin(address indexed sender, uint256 winnings, uint256 sent, bool extra);
 
-    function initialize() public initializer {
-        __SpinMachineV1_init();
+    function initialize(address token_) public initializer {
+        __SpinMachineV1_init(token_);
     }
 
-    function __SpinMachineV1_init() internal initializer {
+    function __SpinMachineV1_init(address token_) internal initializer {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __Rescuable_init_unchained();
         __FaucetCaller_init_unchained();
         __Blacklistable_init_unchained();
-        __SpinMachineV1_init_unchained();
+        __SpinMachineV1_init_unchained(token_);
     }
 
-    function __SpinMachineV1_init_unchained() internal initializer {
+    function __SpinMachineV1_init_unchained(address token_) internal initializer {
+        require(token_ != address(0), "SpinMachine: token zero-address");
+        token = token_;
         freeSpinDelay = 1 days;
         _prizes.push(0);
     }

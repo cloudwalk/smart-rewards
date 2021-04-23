@@ -1,8 +1,10 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers, upgrades, waffle } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ContractFactory, Contract, VoidSigner, Wallet } from "ethers";
-import { smockit, smoddit } from "@eth-optimism/smock"
+import { ContractFactory, Contract, BigNumber, utils } from "ethers";
+import { deployMockContract } from "@ethereum-waffle/mock-contract";
+import { deployContract, MockProvider, solidity } from "ethereum-waffle"
+import { smoddit, smockit } from "@eth-optimism/smock";
 
 describe("smart-rewards tests", async function() {
   let SpinMachineV1: ContractFactory;
@@ -10,25 +12,25 @@ describe("smart-rewards tests", async function() {
   let owner: SignerWithAddress;
   let addr1: SignerWithAddress;
   let addr2: SignerWithAddress;
-  let brlc_address = "0x6275c7A100A6d16035DEa9930E18890bE42185A7";
-  let provider = ethers.getDefaultProvider('rinkeby');
-  let signer = ethers.Wallet.createRandom().connect(provider);
+  let BRLCFactory: ContractFactory;
+  let BRLC: Contract;
+  let MockedBRLC: Contract;
+  let rinkeby_BRLC_address = "0x6275c7A100A6d16035DEa9930E18890bE42185A7";
   let abi = [
-    "function safeTransferFrom(IERC20Upgradeable token, address from, address to, uint256 value) internal"
+    "function balanceOf(address account) public view returns (uint256)",
+    "function safeTransferFrom(IERC20Upgradeable token, address from, address to, uint256 value)"
   ]
-  let brlc_token = await new ethers.Contract(brlc_address, abi, signer);
-  let mocked_brlc = await smockit(brlc_token);
-  console.log(brlc_token.address)
-
+  
   beforeEach(async function() {
-    SpinMachineV1 = await ethers.getContractFactory("SpinMachineV1");
-    spinMachine = await upgrades.deployProxy(SpinMachineV1);
-    //let Brlc = await ethers.getContractFactory('brlc_token');
-    //let brlc = await upgrades.deployProxy(brlc_token);
-    await spinMachine.deployed();
+    BRLCFactory = await ethers.getContractFactory("SafeERC20Upgradeable");
+    BRLC = await BRLCFactory.deploy();
+    await BRLC.deployed();
+    MockedBRLC = await smockit(BRLCFactory);
     [owner, addr1, addr2] = await ethers.getSigners();
-    //brlc_token = await spinMachine.token()
-    console.log(spinMachine.address)
+    
+    SpinMachineV1 = await ethers.getContractFactory("SpinMachineV1");
+    spinMachine = await upgrades.deployProxy(SpinMachineV1, [MockedBRLC.address]);
+    await spinMachine.deployed();
   });
 
   describe("Gamification tests", function() {
@@ -65,10 +67,9 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should buy extra spin", async function() {
-      await spinMachine.connect(signer).buyExtraSpin(addr2.address, 1)
-      //console.log(brlc_token)
-      
-      //Error: VM Exception while processing transaction: revert Address: call to non-contract
+      let result = await spinMachine.buyExtraSpin(owner.address, 1);
+      expect(result['to']).to.equal(spinMachine.address);
+      expect(result['from']).to.equal(owner.address);
     });
 
     it("Should fail if owner or addr1 can't spin", async function() {
@@ -79,11 +80,14 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should sucessfully spin", async function() {
-      //let success: boolean;
-      //let winnings: number;
-      let result: any;
-      //result = await spinMachine.connect(brlc_token).spin(); //Error: Transaction reverted: function call to a non-contract account
-      //console.log(result);
+      let success: boolean;
+      let winnings: number;
+
+      let mockERC20: Contract;
+      mockERC20 = await deployMockContract(addr2, abi);
+      spinMachine = await upgrades.deployProxy(SpinMachineV1, [mockERC20.address]);
+      await mockERC20.mock.balanceOf.returns(utils.parseEther('9999'));
+      await spinMachine.spin();
     });
   });
 });
