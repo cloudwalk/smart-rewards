@@ -1,10 +1,9 @@
 import { ethers, upgrades, waffle } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
-import { ContractFactory, Contract, BigNumber, utils } from "ethers";
+import { ContractFactory, Contract, utils } from "ethers";
 import { deployMockContract } from "@ethereum-waffle/mock-contract";
-import { deployContract, MockProvider, solidity } from "ethereum-waffle"
-import { smoddit, smockit } from "@eth-optimism/smock";
+import { smockit } from "@eth-optimism/smock";
 
 describe("smart-rewards tests", async function() {
   let SpinMachineV1: ContractFactory;
@@ -35,28 +34,28 @@ describe("smart-rewards tests", async function() {
 
   describe("Gamification tests", function() {
 
-    it("Should set the right owner", async function () {
-      // This test expects the owner variable stored in the contract to be equal
-      // to our Signer's owner.
+    it("Should set the right owner and token", async function () {
       expect(await spinMachine.owner()).to.equal(owner.address);
+      expect(await spinMachine.token()).to.equal(MockedBRLC.address);
     });
 
     it("Should set prizes correctly", async function() {
       let prizes = [1,2,3];
-      let prizes_set: number[];
-      await spinMachine.setPrizes(prizes);
-      prizes_set = await spinMachine.getPrizes()
-      expect(prizes_set[0]).to.equal(1);
-      expect(prizes_set[1]).to.equal(2);
-      expect(prizes_set[2]).to.equal(3);
+      let distribution_event = await spinMachine.setPrizes(prizes);
+      let new_prizes = await spinMachine.getPrizes()
+      expect(new_prizes[0]).to.equal(1);
+      expect(new_prizes[1]).to.equal(2);
+      expect(new_prizes[2]).to.equal(3);
+      expect(distribution_event).to.emit(spinMachine, "PrizesDistributionChanged").withArgs(new_prizes);
     });
 
     it("Should set a new free spin delay", async function() {
       let previous_free_spin_delay: number;
       previous_free_spin_delay = await spinMachine.freeSpinDelay();
-      spinMachine.setFreeSpinDelay(43200)
+      let result = await spinMachine.setFreeSpinDelay(43200);
       expect(previous_free_spin_delay).to.equal(86400);
       expect(await spinMachine.freeSpinDelay()).to.equal(43200);
+      expect(result).to.emit(spinMachine, "FreeSpinDelayChanged").withArgs("43200", "86400");
     });
 
     it("Should set a new extra spin price", async function() {
@@ -67,9 +66,8 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should buy extra spin", async function() {
-      let result = await spinMachine.buyExtraSpin(owner.address, 1);
-      expect(result['to']).to.equal(spinMachine.address);
-      expect(result['from']).to.equal(owner.address);
+      let result = await spinMachine.buyExtraSpin(addr1.address, 1);
+      expect(result).to.emit(spinMachine, "ExtraSpinPurchased").withArgs(owner.address, addr1.address, "1");
     });
 
     it("Should fail if owner or addr1 can't spin", async function() {
@@ -80,14 +78,11 @@ describe("smart-rewards tests", async function() {
     });
 
     it("Should sucessfully spin", async function() {
-      let success: boolean;
-      let winnings: number;
-
       let mockERC20: Contract;
       mockERC20 = await deployMockContract(addr2, abi);
       spinMachine = await upgrades.deployProxy(SpinMachineV1, [mockERC20.address]);
       await mockERC20.mock.balanceOf.returns(utils.parseEther('9999'));
-      await spinMachine.spin();
+      expect(await spinMachine.spin()).to.emit(spinMachine, "Spin").withArgs(owner.address, "0", "0", false);
     });
   });
 });
