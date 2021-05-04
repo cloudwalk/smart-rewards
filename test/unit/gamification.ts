@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/dist/src/signer-with-address";
 import { ContractFactory, Contract } from "ethers";
 
-describe("smart-rewards tests", async function() {
+describe("gamification tests", async function() {
   let SpinMachineV1: ContractFactory;
   let spinMachine: Contract;
   let owner: SignerWithAddress;
@@ -23,7 +23,7 @@ describe("smart-rewards tests", async function() {
     await spinMachine.deployed();
   });
 
-  describe("Gamification tests", function() {
+  describe("SpinMachineV1 tests", function() {
 
     it("Should set the right owner and token", async function () {
       expect(await spinMachine.owner()).to.equal(owner.address);
