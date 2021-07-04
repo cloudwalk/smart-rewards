@@ -69,17 +69,22 @@ describe("gamification tests", async function() {
     });
 
     it("Should buy extra spin", async function() {
-      //await spinMachine.setExtraSpinPrice(ethers.utils.parseEther("0.000000000000000001"));
-      //const extra_spin_price = await spinMachine.extraSpinPrice();
-      //console.log(extra_spin_price.toString());
+      let alice_extra_spins = await spinMachine.extraSpins(alice.address);
+      expect(alice_extra_spins.toString()).to.equal("0");
+      
+      await BRLC.approve(spinMachine.address, ethers.utils.parseEther("1"))
+      await BRLC.mint(ethers.utils.parseEther("1"));
+      
+      await spinMachine.setExtraSpinPrice(ethers.utils.parseEther("0.000000000000000001"));
+      
       let owner_balance = await owner.getBalance()
-      //console.log(ethers.utils.formatEther(owner_balance));
-      const result = await spinMachine.connect(owner).buyExtraSpin(alice.address, 1);
-      const alice_extra_spins = await spinMachine.extraSpins(alice.address);
-      owner_balance = await owner.getBalance()
-      //check if correct token amount was transfered from owner to spinMachine
-      expect(result).to.emit(spinMachine, "ExtraSpinPurchased").withArgs(owner.address, alice.address, "1");
+      const result = await spinMachine.buyExtraSpin(alice.address, 1);
+      alice_extra_spins = await spinMachine.extraSpins(alice.address);
+
+      expect(result).to.emit(spinMachine, "ExtraSpinPurchased").withArgs(owner.address, alice.address, 1);
       expect(alice_extra_spins.toString()).to.equal("1");
+      // check if correct token amount was transfered from owner to spinMachine
+      expect(ethers.utils.formatEther(await BRLC.balanceOf(owner.address))).to.equal("0.999999999999999999");
     });
 
     it("Should grant extra spin", async function() {
@@ -136,8 +141,8 @@ describe("gamification tests", async function() {
     });
 
     it("Should not spin more than once if there is delay and no extras", async function() {
-      let res = await spinMachine.spin.call({from: bob.address});
-      console.log(res)
+      //let res = await spinMachine.spin.call({from: bob.address});
+      let res = await spinMachine.connect(bob).spin();
       res = await res.wait()
       let logs = SpinMachineInterface.parseLog(res.logs[0])
       let args = logs.args
