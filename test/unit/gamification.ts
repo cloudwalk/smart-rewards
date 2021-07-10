@@ -25,7 +25,7 @@ describe("gamification tests", async function() {
     SpinMachineInterface = spinMachine.interface
   });
 
-  describe("SpinMachineV1 tests", function() {
+  describe("SpinMachineV1 tests", async function() {
 
     it("Should set the right owner and token", async function() {
       expect(await spinMachine.owner()).to.equal(owner.address);
@@ -116,9 +116,10 @@ describe("gamification tests", async function() {
     });
     
     it("Should spin twice if there is delay but has one extra spin", async function() {
-      await spinMachine.grantExtraSpin(bob.address, 1);
+      expect((await spinMachine.freeSpinDelay()).toNumber()).to.be.greaterThan(0);
+
       let res = await spinMachine.connect(bob).spin();
-      res = await res.wait()
+      res = await res.wait();
       let args = SpinMachineInterface.parseLog(res.logs[0]).args
 
       let winnings = args.winnings.toString();
@@ -127,32 +128,36 @@ describe("gamification tests", async function() {
       expect(extra).to.equal(false);
       
       // extra spin
-      res = await spinMachine.connect(bob).spin()
-      res = await res.wait()
-      args = SpinMachineInterface.parseLog(res.logs[0]).args
-
+      await spinMachine.grantExtraSpin(bob.address, 1);
+      res = await spinMachine.connect(bob).spin();
+      res = await res.wait();
+      args = SpinMachineInterface.parseLog(res.logs[0]).args;
       winnings = args.winnings.toString();
       sent = args.sent.toString();
       extra = args.extra;
       expect(extra).to.equal(true);
-
-      // find a way to check if spin() really happened, can't access 'success'
-      // maybe use Waffle's method to check if function _winnings() was called
     });
 
     it("Should not spin more than once if there is delay and no extras", async function() {
-      //let res = await spinMachine.spin.call({from: bob.address});
+      expect((await spinMachine.freeSpinDelay()).toNumber()).to.be.greaterThan(0);
+      expect(await spinMachine.extraSpins(bob.address)).to.equal(0);
       let res = await spinMachine.connect(bob).spin();
       res = await res.wait()
-      let logs = SpinMachineInterface.parseLog(res.logs[0])
-      let args = logs.args
-
+      let args = SpinMachineInterface.parseLog(res.logs[0]).args
       let winnings = args.winnings.toString();
       let sent = args.sent.toString();
       let extra = args.extra;
       expect(extra).to.equal(false);
+      
+      // try to spin again
+      expect(await spinMachine.canSpinFor(bob.address)).to.equal(false);
       // find a way to check if spin() really happened, can't access 'success'
-      // maybe use Waffle's method to check if function _winnings() was called
+      // Waffle's method to check if function was called doesn't work
+      // only current way is checking that logs are empty
+      res = await spinMachine.connect(bob).spin();
+      res = await res.wait();
+      const empty_array = [];
+      expect(res.logs).to.deep.equal(empty_array);
     });
   });
 });
