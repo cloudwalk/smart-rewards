@@ -27,10 +27,10 @@ module.exports = {
         enabled: true,
         runs: 1000
       }
-    }
+    },
+  },
   etherscan: {
     // API key for Etherscan
     apiKey: ""
   }
 };
-
