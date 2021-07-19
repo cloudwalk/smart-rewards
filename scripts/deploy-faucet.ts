@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 
-async function main() {    
+async function main() {
   const Faucet = await ethers.getContractFactory("FaucetV1");
   const faucet = await Faucet.deploy();
   await faucet.deployed();
