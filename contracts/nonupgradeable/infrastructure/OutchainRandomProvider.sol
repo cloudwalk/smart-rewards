@@ -8,8 +8,11 @@ import { IRandomProvider } from "../../interfaces/IRandomProvider.sol";
 contract OutchainRandomProvider is Ownable, IRandomProvider {
     uint256 _randomNumber;
 
+    event RandomNumberChanged(uint256 number);
+
     function setRandomNumber(uint256 randomNumber) external onlyOwner {
         _randomNumber = randomNumber;
+        emit RandomNumberChanged(_randomNumber);
     }
 
     /**
