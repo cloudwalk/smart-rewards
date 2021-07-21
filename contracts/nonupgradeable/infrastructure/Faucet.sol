@@ -6,7 +6,7 @@ import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { SafeMath } from "@openzeppelin/contracts/math/SafeMath.sol";
 import { IFaucet } from "../../interfaces/IFaucet.sol";
 
-contract FaucetV1 is IFaucet, Ownable {
+contract Faucet is IFaucet, Ownable {
     using SafeMath for uint256;
 
     uint256 public recipientMinBalance;
@@ -54,7 +54,7 @@ contract FaucetV1 is IFaucet, Ownable {
      * Emits an {Configure} event.
      */
     function configure(uint256 minBalance, uint256 desiredBalance) external onlyOwner {
-        require(minBalance <= desiredBalance, "FaucetV1: minBalance <= desiredBalance");
+        require(minBalance <= desiredBalance, "Faucet: minBalance <= desiredBalance");
         recipientMinBalance = minBalance;
         recipientDesiredBalance = desiredBalance;
         emit Configure(minBalance, desiredBalance);
