@@ -140,15 +140,8 @@ contract SpinMachineUpgradeable is RescuableUpgradeable, PausableExUpgradeable, 
     /**
      * @dev Returns true if `account` can successfully execute a spin.
      */
-    function canSpinFor(address account)  override external view returns (bool) {
+    function canSpin(address account) override external view returns (bool) {
         return _hasFreeSpin(account) || _hasExtraSpin(account);
-    }
-
-    /**
-     * @dev Returns true if `msg.sender` can successfully execute a spin.
-     */
-    function canSpin() override external view returns (bool) {
-        return _hasFreeSpin(msg.sender) || _hasExtraSpin(msg.sender);
     }
 
     function _extraSpin(address account) private returns (bool success, uint256 winnings) {
