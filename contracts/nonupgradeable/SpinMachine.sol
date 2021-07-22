@@ -17,7 +17,7 @@ contract SpinMachine is Rescuable, PausableEx, Blacklistable, FaucetCaller, Rand
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    address constant public token = 0x6275c7A100A6d16035DEa9930E18890bE42185A7;
+    address public token;
     mapping(address => uint256) public lastFreeSpin;
     mapping(address => uint256) public extraSpins;
     uint256 public extraSpinPrice;
@@ -31,7 +31,8 @@ contract SpinMachine is Rescuable, PausableEx, Blacklistable, FaucetCaller, Rand
     event ExtraSpinGranted(address indexed sender, address indexed spinOwner, uint256 count);
     event Spin(address indexed sender, uint256 winnings, uint256 sent, bool extra);
 
-    constructor() {
+    constructor(address token_) {
+        token = token_;
         freeSpinDelay = 1 days;
         _prizes.push(0);
     }
