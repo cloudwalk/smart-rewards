@@ -97,8 +97,10 @@ contract SpinMachine is Rescuable, PausableEx, Blacklistable, FaucetCaller, Rand
      */
     function spin() override external whenNotPaused notBlacklisted(msg.sender) returns (bool success, uint256 winnings) {
         _faucetRequest(msg.sender);
-        (success, winnings) = _freeSpin(msg.sender);
-        if(!success) (success, winnings) = _extraSpin(msg.sender);
+        if(getBalance() > 0) {
+            (success, winnings) = _freeSpin(msg.sender);
+            if(!success) (success, winnings) = _extraSpin(msg.sender);
+        }
     }
 
     /**
@@ -119,6 +121,10 @@ contract SpinMachine is Rescuable, PausableEx, Blacklistable, FaucetCaller, Rand
      */
     function getPrizes() public view returns(uint256[] memory) {
         return _prizes;
+    }
+
+    function getBalance() public view returns(uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 
     /**
