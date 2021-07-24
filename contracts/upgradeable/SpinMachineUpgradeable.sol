@@ -150,6 +150,10 @@ contract SpinMachineUpgradeable is RescuableUpgradeable, PausableExUpgradeable, 
         return _hasFreeSpin(account) || _hasExtraSpin(account);
     }
 
+    function canFreeSpin(address account) override external view returns (bool) {
+        return _hasFreeSpin(account);
+    }
+
     function _extraSpin(address account) private returns (bool success, uint256 winnings) {
         if(_hasExtraSpin(account)) {
             extraSpins[account] = extraSpins[account].sub(1);
