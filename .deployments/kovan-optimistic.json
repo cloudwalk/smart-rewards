@@ -1,0 +1,14 @@
+{
+    "SpinMachine": {
+        "name": "SpinMachine",
+        "address": "0x6FBf6bA6b0c663EbAC7f4fC6a1caeD6c7376dF40",
+        "link": "https://kovan-optimistic.etherscan.io/address/0x6FBf6bA6b0c663EbAC7f4fC6a1caeD6c7376dF40",
+        "network": "kovan"
+    },
+    "OutchainRandomProvider": {
+        "name": "OutchainRandomProvider",
+        "address": "0xaAf5C4bd1B62Bd7705785EBC4711f9e1C7b27Ce4",
+        "link": "https://kovan-optimistic.etherscan.io/address/0xaAf5C4bd1B62Bd7705785EBC4711f9e1C7b27Ce4",
+        "network": "kovan"
+    }
+}
