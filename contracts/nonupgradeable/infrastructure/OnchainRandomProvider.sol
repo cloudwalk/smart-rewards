@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
+// @unsupported: ovm
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "./IRandomProvider.sol";
+import { IRandomProvider } from "../../interfaces/IRandomProvider.sol";
 
 contract OnchainRandomProvider is IRandomProvider {
     /**

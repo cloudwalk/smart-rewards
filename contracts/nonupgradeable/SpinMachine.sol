@@ -2,22 +2,22 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/math/MathUpgradeable.sol";
-import "../utils/Blacklistable.sol";
-import "../utils/FaucetCaller.sol";
-import "../utils/Rescuable.sol";
-import "./ISpinMachine.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from  "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import { SafeMath } from  "@openzeppelin/contracts/math/SafeMath.sol";
+import { Math } from "@openzeppelin/contracts/math/Math.sol";
+import { Blacklistable } from "./utils/Blacklistable.sol";
+import { FaucetCaller } from "./utils/FaucetCaller.sol";
+import { PausableEx } from "./utils/PausableEx.sol";
+import { Rescuable } from "./utils/Rescuable.sol";
+import { Randomable } from "./utils/Randomable.sol";
+import { ISpinMachine } from "../interfaces/ISpinMachine.sol";
 
-contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgradeable, FaucetCaller, ISpinMachine {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-    using SafeMathUpgradeable for uint256;
+contract SpinMachine is Rescuable, PausableEx, Blacklistable, FaucetCaller, Randomable, ISpinMachine {
+    using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
-    address constant public token = 0x6275c7A100A6d16035DEa9930E18890bE42185A7;
+    address public token;
     mapping(address => uint256) public lastFreeSpin;
     mapping(address => uint256) public extraSpins;
     uint256 public extraSpinPrice;
@@ -31,21 +31,8 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
     event ExtraSpinGranted(address indexed sender, address indexed spinOwner, uint256 count);
     event Spin(address indexed sender, uint256 winnings, uint256 sent, bool extra);
 
-    function initialize() public initializer {
-        __SpinMachineV1_init();
-    }
-
-    function __SpinMachineV1_init() internal initializer {
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __Pausable_init_unchained();
-        __Rescuable_init_unchained();
-        __FaucetCaller_init_unchained();
-        __Blacklistable_init_unchained();
-        __SpinMachineV1_init_unchained();
-    }
-
-    function __SpinMachineV1_init_unchained() internal initializer {
+    constructor(address token_) {
+        token = token_;
         freeSpinDelay = 1 days;
         _prizes.push(0);
     }
@@ -82,7 +69,7 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
     function buyExtraSpin(address spinOwner, uint256 count) public whenNotPaused {
         require(spinOwner != address(0), "SpinMachine: spinOwner is the zero address");
         require(count > 0, "SpinMachine: spins count must be greater than 0");
-        IERC20Upgradeable(token).safeTransferFrom(msg.sender, address(this), extraSpinPrice.mul(count));
+        IERC20(token).safeTransferFrom(msg.sender, address(this), extraSpinPrice.mul(count));
         extraSpins[spinOwner] = extraSpins[spinOwner].add(count);
         emit ExtraSpinPurchased(msg.sender, spinOwner, count);
     }
@@ -110,8 +97,10 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
      */
     function spin() override external whenNotPaused notBlacklisted(msg.sender) returns (bool success, uint256 winnings) {
         _faucetRequest(msg.sender);
-        (success, winnings) = _freeSpin(msg.sender);
-        if(!success) (success, winnings) = _extraSpin(msg.sender);
+        if(getBalance() > 0) {
+            (success, winnings) = _freeSpin(msg.sender);
+            if(!success) (success, winnings) = _extraSpin(msg.sender);
+        }
     }
 
     /**
@@ -134,59 +123,60 @@ contract SpinMachineV1 is Initializable, Blacklistable, Rescuable, PausableUpgra
         return _prizes;
     }
 
-    /**
-     * @dev Returns true if `addr` can successfully execute a spin.
-     */
-    function canSpinFor(address addr)  override external view returns (bool) {
-        return _hasFreeSpin(addr) || _hasExtraSpin(addr);
+    function getBalance() public view returns(uint256) {
+        return IERC20(token).balanceOf(address(this));
     }
 
     /**
-     * @dev Returns true if `msg.sender` can successfully execute a spin.
+     * @dev Returns true if `account` can successfully execute a spin.
      */
-    function canSpin() override external view returns (bool) {
-        return _hasFreeSpin(msg.sender) || _hasExtraSpin(msg.sender);
+    function canSpin(address account) override external view returns (bool) {
+        return _hasFreeSpin(account) || _hasExtraSpin(account);
     }
 
-    function _extraSpin(address addr) private returns (bool success, uint256 winnings) {
-        if(_hasExtraSpin(addr)) {
-            extraSpins[addr] = extraSpins[addr].sub(1);
+    function canFreeSpin(address account) override external view returns (bool) {
+        return _hasFreeSpin(account);
+    }
+
+    function _extraSpin(address account) private returns (bool success, uint256 winnings) {
+        if(_hasExtraSpin(account)) {
+            extraSpins[account] = extraSpins[account].sub(1);
             success = true;
             winnings = _winnings();
-            uint256 sent = _send(addr, winnings);
-            emit Spin(addr, winnings, sent, true);
+            uint256 sent = _send(account, winnings);
+            emit Spin(account, winnings, sent, true);
         }
     }
 
-    function _freeSpin(address addr) private returns (bool success, uint256 winnings) {
-        if(_hasFreeSpin(addr)) {
-            lastFreeSpin[addr] = block.timestamp;
+    function _freeSpin(address account) private returns (bool success, uint256 winnings) {
+        if(_hasFreeSpin(account)) {
+            lastFreeSpin[account] = block.timestamp;
             success = true;
             winnings = _winnings();
-            uint256 sent = _send(addr, winnings);
-            emit Spin(addr, winnings, sent, false);
+            uint256 sent = _send(account, winnings);
+            emit Spin(account, winnings, sent, false);
         }
     }
 
     function _send(address to, uint256 winnings) private returns(uint256) {
-        uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
-        uint256 send = MathUpgradeable.min(winnings, balance);
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        uint256 send = Math.min(winnings, balance);
         if(send > 0) {
-            IERC20Upgradeable(token).safeTransfer(to, send);
+            IERC20(token).safeTransfer(to, send);
         }
         return send;
     }
 
-    function _hasExtraSpin(address addr) private view returns(bool) {
-        return extraSpins[addr] > 0;
+    function _hasExtraSpin(address account) private view returns(bool) {
+        return extraSpins[account] > 0;
     }
 
-    function _hasFreeSpin(address addr) private view returns(bool) {
-        return lastFreeSpin[addr].add(freeSpinDelay) <= block.timestamp;
+    function _hasFreeSpin(address account) private view returns(bool) {
+        return lastFreeSpin[account].add(freeSpinDelay) <= block.timestamp;
     }
 
     function _randomIndex() private view returns(uint256) {
-         return uint256(keccak256(abi.encodePacked(block.timestamp, block.difficulty, msg.sender))) % _prizes.length;
+         return _getRandomness() % _prizes.length;
     }
 
     function _winnings() private view returns(uint256) {

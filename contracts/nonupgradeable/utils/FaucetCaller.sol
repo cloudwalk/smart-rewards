@@ -2,22 +2,13 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "../faucet/IFaucet.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { IFaucet } from "../../interfaces/IFaucet.sol";
 
-contract FaucetCaller is OwnableUpgradeable {
+abstract contract FaucetCaller is Ownable {
     address private _faucet;
 
     event FaucetChanged(address faucet);
-
-    function __FaucetCaller_init() internal initializer {
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __FaucetCaller_init_unchained();
-    }
-
-    function __FaucetCaller_init_unchained() internal initializer {
-    }
 
     /**
      * @dev Requests faucet contract to renew `recipient` Ether balance.

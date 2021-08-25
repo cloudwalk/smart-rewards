@@ -2,15 +2,15 @@
 
 pragma solidity >=0.6.0 <0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /**
  * @title Blacklistable Token
  * @dev Allows accounts to be blacklisted by a "blacklister" role
  */
-contract Blacklistable is OwnableUpgradeable {
+abstract contract BlacklistableUpgradeable is OwnableUpgradeable {
     address private _blacklister;
-    mapping(address => bool) internal blacklisted;
+    mapping(address => bool) private _blacklisted;
 
     event Blacklisted(address indexed account);
     event UnBlacklisted(address indexed account);
@@ -31,7 +31,7 @@ contract Blacklistable is OwnableUpgradeable {
      */
     modifier onlyBlacklister() {
         require(
-            msg.sender == _blacklister,
+            getBlacklister() == _msgSender(),
             "Blacklistable: caller is not the blacklister"
         );
         _;
@@ -43,13 +43,13 @@ contract Blacklistable is OwnableUpgradeable {
      */
     modifier notBlacklisted(address account) {
         require(
-            !blacklisted[account],
+            !_blacklisted[account],
             "Blacklistable: account is blacklisted"
         );
         _;
     }
 
-    function getBlacklister() external view returns (address) {
+    function getBlacklister() public view virtual returns (address) {
         return _blacklister;
     }
 
@@ -57,8 +57,8 @@ contract Blacklistable is OwnableUpgradeable {
      * @dev Checks if account is blacklisted
      * @param account The address to check
      */
-    function isBlacklisted(address account) external view returns (bool) {
-        return blacklisted[account];
+    function isBlacklisted(address account) public view returns (bool) {
+        return _blacklisted[account];
     }
 
     /**
@@ -66,7 +66,7 @@ contract Blacklistable is OwnableUpgradeable {
      * @param account The address to blacklist
      */
     function blacklist(address account) external onlyBlacklister {
-        blacklisted[account] = true;
+        _blacklisted[account] = true;
         emit Blacklisted(account);
     }
 
@@ -75,7 +75,7 @@ contract Blacklistable is OwnableUpgradeable {
      * @param account The address to remove from the blacklist
      */
     function unBlacklist(address account) external onlyBlacklister {
-        blacklisted[account] = false;
+        _blacklisted[account] = false;
         emit UnBlacklisted(account);
     }
 
@@ -89,11 +89,11 @@ contract Blacklistable is OwnableUpgradeable {
     }
 
     /**
-     * @dev Adds msg.sender to blacklist (self-blacklist)
+     * @dev Adds _msgSender() to blacklist (self-blacklist)
      */
     function selfBlacklist() external {
-        blacklisted[msg.sender] = true;
-        emit Blacklisted(msg.sender);
-        emit SelfBlacklisted(msg.sender);
+        _blacklisted[_msgSender()] = true;
+        emit SelfBlacklisted(_msgSender());
+        emit Blacklisted(_msgSender());
     }
 }
