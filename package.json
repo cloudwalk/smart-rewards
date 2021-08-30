@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@eth-optimism/hardhat-ovm": "^0.2.3",
-    "@openzeppelin/contracts": "^3.4.1",
+    "@openzeppelin/contracts": "^3.4.2",
     "@openzeppelin/contracts-upgradeable": "^3.4.1"
   }
 }
